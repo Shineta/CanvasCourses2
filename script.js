@@ -264,14 +264,42 @@ async function createAssignmentGroup(courseId, groupName) {
     }
 }
 
+// // Function to create an assignment
+// async function createAssignment(courseId, assignmentData) {
+//     const url = `${canvasDomain}/api/v1/courses/${courseId}/assignments`;
+//     const data = {
+//         assignment: {
+//             name: assignmentData.assignmentName,
+//             points_possible: assignmentData.points,
+//             due_at: assignmentData.dueDate,
+//             // Add other assignment fields as needed
+//         }
+//     };
+
+//     try {
+//         const response = await axios.post(url, data, {
+//             headers: {
+//                 'Authorization': `Bearer ${accessToken}`,
+//                 'Content-Type': 'application/json'
+//             }
+//         });
+//         console.log('Assignment created:', response.data);
+//         return response.data;
+//     } catch (error) {
+//         console.error('Error creating assignment:', error);
+//     }
+// }
+
 // Function to create an assignment
 async function createAssignment(courseId, assignmentData) {
     const url = `${canvasDomain}/api/v1/courses/${courseId}/assignments`;
     const data = {
         assignment: {
             name: assignmentData.assignmentName,
+            id: assignmentData.id,
             points_possible: assignmentData.points,
             due_at: assignmentData.dueDate,
+
             // Add other assignment fields as needed
         }
     };
@@ -283,12 +311,20 @@ async function createAssignment(courseId, assignmentData) {
                 'Content-Type': 'application/json'
             }
         });
-        console.log('Assignment created:', response.data);
-        return response.data;
+
+        // Assuming the assignment ID is in response.data.id
+        const createdAssignment = {
+            ...response.data, // Spread operator to copy all properties from response.data
+            id: response.data.id // Explicitly adding the ID for clarity
+        };
+
+        console.log('Assignment created:', createdAssignment);
+        return createdAssignment;
     } catch (error) {
         console.error('Error creating assignment:', error);
     }
 }
+
 
 
 // Function to automate module and assignment group creation
@@ -354,24 +390,38 @@ async function createAssignment(courseId, assignmentName, moduleName) {
     }
 }
 
-// Function to find an assignment ID by name
 async function findAssignmentIdByName(courseId, assignmentName) {
-    const url = `${canvasDomain}/api/v1/courses/${courseId}/assignments`;
+    let url = `${canvasDomain}/api/v1/courses/${courseId}/assignments`;
+
     try {
-      const response = await axios.get(url, {
-        headers: { 'Authorization': `Bearer ${accessToken}` },
-        params: {
-          per_page: 100
+        while (url) {
+            const response = await axios.get(url, {
+                headers: { 'Authorization': `Bearer ${accessToken}` },
+                params: { per_page: 100 }
+            });
+
+            const assignments = response.data;
+            const foundAssignment = assignments.find(assignment => assignment.name === assignmentName);
+            if (foundAssignment) return foundAssignment.id;
+
+            // Check for the 'next' link in the headers
+            url = null; // Reset URL to null initially
+            const linkHeader = response.headers['link'];
+            if (linkHeader) {
+                const links = linkHeader.split(',');
+                const nextLink = links.find(link => link.includes('rel="next"'));
+                if (nextLink) {
+                    const match = nextLink.match(/<(.*?)>/);
+                    url = match ? match[1] : null;
+                }
+            }
         }
-      });
-      const assignments = response.data;
-      const foundAssignment = assignments.find(assignment => assignment.name === assignmentName);
-      return foundAssignment ? foundAssignment.id : null;
     } catch (error) {
-      console.error('Error finding assignment:', error);
-      return null;
+        console.error('Error finding assignment:', error);
     }
-  }
+    return null;
+}
+
   
 // Function to add a module item that is an assignment
 async function addAssignmentModuleItem(courseId, moduleId, assignmentName) {
@@ -471,4 +521,3 @@ async function addAssignmentModuleItem(courseId, moduleId, assignmentName) {
     await findAndDeleteModule(courseId, "NAME OF CANVAS ASSIGNMENT GROUP & ASSOCIATED MODULE");
     // await findAndDeleteSpecificAssignmentGroup(courseId, "NAME OF CANVAS ASSIGNMENT GROUP & ASSOCIATED MODULE");
 })();
-
