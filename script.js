@@ -230,22 +230,22 @@ async function addModuleItem(courseId, moduleId, title, type = 'Assignment') {
     }
   }
   
-  // Function to add module items based on the spreadsheet data
-  async function addModuleItemsFromSpreadsheet(courseId, jsonData) {
-    for (const item of jsonData) {
-      if (item['Ed Audience/Role'] === 'Student') {
-        const moduleName = item['NAME OF CANVAS ASSIGNMENT GROUP & ASSOCIATED MODULE'];
-        const moduleItemId = item['DISPLAY TITLE for course build'];
-        const moduleId = await findModuleIdByName(courseId, moduleName);
+//   // Function to add module items based on the spreadsheet data
+//   async function addModuleItemsFromSpreadsheet(courseId, jsonData) {
+//     for (const item of jsonData) {
+//       if (item['Ed Audience/Role'] === 'Student') {
+//         const moduleName = item['NAME OF CANVAS ASSIGNMENT GROUP & ASSOCIATED MODULE'];
+//         const moduleItemId = item['DISPLAY TITLE for course build'];
+//         const moduleId = await findModuleIdByName(courseId, moduleName);
   
-        if (moduleId) {
-          await addModuleItem(courseId, moduleId, moduleItemId);
-        } else {
-          console.log(`Module '${moduleName}' not found.`);
-        }
-      }
-    }
-  }
+//         if (moduleId) {
+//           await addModuleItem(courseId, moduleId, moduleItemId);
+//         } else {
+//           console.log(`Module '${moduleName}' not found.`);
+//         }
+//       }
+//     }
+//   }
 
 
 
@@ -469,6 +469,49 @@ async function addAssignmentModuleItem(courseId, moduleId, assignmentName) {
       }
     }
   }
+
+  // Function to create a new page in the course
+async function createCoursePage(courseId, pageTitle, pageContent) {
+    const url = `${canvasDomain}/api/v1/courses/${courseId}/pages`;
+    const data = {
+        wiki_page: {
+            title: pageTitle,
+            body: pageContent
+        }
+    };
+
+    try {
+        const response = await axios.post(url, data, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        console.log('Page created:', response.data);
+        return response.data; // Returns the created page object
+    } catch (error) {
+        console.error('Error creating page:', error);
+    }
+}
+
+// Function to add a page to a module
+async function addPageToModule(courseId, moduleId, pageUrl) {
+    const url = `${canvasDomain}/api/v1/courses/${courseId}/modules/${moduleId}/items`;
+    const data = {
+        module_item: {
+            title: pageUrl,
+            type: 'Page',
+            page_url: pageUrl
+        }
+    };
+
+    try {
+        const response = await axios.post(url, data, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        console.log(`Page '${pageUrl}' added to module ID ${moduleId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error adding page to module:', error);
+    }
+}
   
 
 
@@ -493,28 +536,88 @@ async function addAssignmentModuleItem(courseId, moduleId, assignmentName) {
     // await addAssignmentsToModules(courseId, spreadsheetData);
 
 
-// // Step 4: Create Assignments in their respective groups
-// const assignmentsData = await readAssignmentsData(spreadsheetPath);
-// await addAssignmentsToGroups(courseId, assignmentsData);
+//  // Step 4: Create Assignments based on the DISPLAY TITLE for course build
+//  const jsonData = await convertSpreadsheetToJson(spreadsheetPath); // Ensure this function is defined and works correctly
+//  const studentAssignments = jsonData.filter(row => row['Ed Audience/Role'] === 'Student')
+//      .map(row => {
+//          return {
+//              module: row['NAME OF CANVAS ASSIGNMENT GROUP & ASSOCIATED MODULE'],
+//              assignmentTitle: row['DISPLAY TITLE for course build']
+//          };
+//      });
+//  for (let assignment of studentAssignments) {
+//      await createAssignment(courseId, assignment.assignmentTitle, assignment.module);
+//  }
 
- // Step 4: Create Assignments based on the DISPLAY TITLE for course build
- const jsonData = await convertSpreadsheetToJson(spreadsheetPath); // Ensure this function is defined and works correctly
- const studentAssignments = jsonData.filter(row => row['Ed Audience/Role'] === 'Student')
-     .map(row => {
-         return {
-             module: row['NAME OF CANVAS ASSIGNMENT GROUP & ASSOCIATED MODULE'],
-             assignmentTitle: row['DISPLAY TITLE for course build']
-         };
-     });
- for (let assignment of studentAssignments) {
-     await createAssignment(courseId, assignment.assignmentTitle, assignment.module);
- }
+//Step 4: Create Assignments based on the DISPLAY TITLE for course build
+const jsonData = await convertSpreadsheetToJson(spreadsheetPath);
+const studentAssignments = jsonData.filter(row => row['Ed Audience/Role'] === 'Student')
+    .map(row => {
+        return {
+            module: row['NAME OF CANVAS ASSIGNMENT GROUP & ASSOCIATED MODULE'],
+            assignmentTitle: row['DISPLAY TITLE for course build'],
+            category: row['Category'] // Adding the 'Category' column
+        };
+    });
+
+
+for (let assignment of studentAssignments) {
+    if (assignment.category && assignment.category.toLowerCase() === 'required') {
+        await createAssignment(courseId, assignment.assignmentTitle, assignment.module);
+    }
+}
+
+
+
+await addAllAssignmentsAsModuleItems(courseId, jsonData);
+
 
 
  await addAllAssignmentsAsModuleItems(courseId, jsonData);
 
+ const pageTitle = "Important Unit Design and Support Information";
+    const pageContent = `<h2><strong>Working with course resource links</strong></h2>
+    <p><span>All links in this course have been tested and validated in Canvas. Be aware that for links to launch properly:</span></p>
+    <ol>
+        <li><span> Assignments or Teacher Resource items must be </span><span style="color: #ba372a;">PUBLISHED</span><span>.</span><span> Courses have been designed with all links intentionally Unpublished, leaving the choice to you as to when you want them to appear.</span></li>
+        <li><span> Links will only launch for users who have </span><span><span style="color: #ba372a;">ROSTERED roles</span> </span><span>in both Canvas and HMH Ed as either </span><span style="color: #ba372a;">Teacher or Student</span><span>.</span></li>
+        <li><span> Writable links will only function properly after you have done the </span><span style="color: #ba372a;">initial setup to Writable via HMH Ed.</span><span> For more information, see Writable Support below.</span></li>
+        <li><span> Under certain circumstances, Canvas does not copy all referenced information when you only copy a single Module instead of the entire course. Use your </span><span style="color: #ba372a;">Canvas Link Validator</span><span> to confirm that what you have copied is working in your course.</span></li>
+    </ol>
+    <p><span>If you have problems with links not related to the notes above, please refer to the Support section below.</span></p>
+    <p>&nbsp;</p>
+    <h2><strong>Course Design</strong></h2>
+    <ol>
+        <li><span>Module 1 contains the Course Overview for this Unit.</span></li>
+        <li aria-level="1"><span>Module 2 contains all Teacher Resources available for this Unit.</span></li>
+        <li aria-level="1"><span>The remaining Modules are all divided by text selection titles and subsections that match the instructional flow on HMH Ed and your print materials. The final module includes the Unit Tasks. These modules are all set to Unpublished.</span></li>
+        <li aria-level="1"><span>The final module includes the Unit Tasks.</span></li>
+        <li aria-level="1"><span>All modules are set to Unpublished.</span></li>
+        <li aria-level="1"><span>Into Literature assessments have been created as assignments with app links embedded in the text field of the assignment. This allows students to respond to assessments within Canvas.</span></li>
+        <li aria-level="1"><span>Selection assessments are all set to a point value of 10, Unit Tasks are all set to a point value of 100. Teachers can customize these point values, including setting selection assessments to 100 points if they are used summatively.</span></li>
+        <li aria-level="1"><span style="color: var(--ic-brand-font-color-dark); font-family: inherit; font-size: 1rem;"><span style="color: #ba372a;">Practice tests, selection tests, and unit tests must be</span> <a href="https://s3.amazonaws.com/downloads.hmlt.hmco.com/CustomerExperience/CCSD/CCSD+HMH+Into+Reading_Creating+Assignments.pdf">created for each class</a>. Use of Digital Assessments allows student scores to be available for your courses in both the HMH Ed and the Canvas platform. We have inserted placeholders in the recommended location within the Modules to prompt you to complete the setup. A link to directions is in the Note text, should you need help with the process.</span></li>
+    </ol>
+    <p>&nbsp;</p>
+    <h2><strong>Support</strong></h2>
+    <ul>
+        <li><span>If you need help with working with HMH Ed and Into Literature components of this course, go to </span><a href="https://support.hmhco.com/s/article/ccsd"><span>https://support.hmhco.com/s/article/ccsd</span></a><span> for more information.</span></li>
+        <li>For help with Writable components of this course, go to <a href="https://intercom.help/writable/en/articles/8302047-clark-county-canvas-set-up">https://intercom.help/writable/en/articles/8302047-clark-county-canvas-set-up</a> for information about initial set up and linking assignments between the platforms.</li>
+    </ul>`; //Page content
+    const moduleName = "G8_Unit 6: Course Overview (DO NOT PUBLISH)";
 
- 
+    // Step 1: Create a new page
+    const newPage = await createCoursePage(courseId, pageTitle, pageContent);
+
+    if (newPage) {
+        // Step 2: Find the module ID for "Course Overview"
+        const moduleId = await findModuleIdByName(courseId, moduleName);
+        if (moduleId) {
+            // Step 3: Add the page to the "Course Overview" module
+            await addPageToModule(courseId, moduleId, newPage.url);
+        } else {
+            console.log(`Module named '${moduleName}' not found.`);
+        }
+    }
 
 
     // Optional: Delete a specific module and assignment group
