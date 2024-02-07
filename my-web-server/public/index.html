@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Content Search</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+        #output {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Search in Course Content</h1>
+
+        <label for="courseId">Course ID:</label><br>
+        <input type="text" id="courseId" name="courseId"><br><br>
+
+        <label for="searchText">Search Text:</label><br>
+        <input type="text" id="searchText" name="searchText"><br><br>
+
+        <button onclick="searchTextInCourse()">Search</button>
+
+        <div id="output"></div>
+    </div>
+
+    <script>
+        async function searchTextInCourse() {
+            const courseId = document.getElementById('courseId').value;
+            const searchText = document.getElementById('searchText').value;
+            if (!courseId || !searchText) {
+                alert('Please enter both course ID and text to search for.');
+                return;
+            }
+
+            document.getElementById('output').innerHTML = 'Searching...';
+            
+            try {
+                const response = await fetch('http://localhost:3000/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ courseId, searchText })
+                });
+
+                const data = await response.json();
+                document.getElementById('output').innerHTML = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('output').innerHTML = 'Error occurred during search.';
+            }
+        }
+    </script>
+</body>
+</html>

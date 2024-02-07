@@ -7,98 +7,119 @@ const courseId = '14706';
 const spreadsheetPath = '/workspaces/CanvasCourses2/IntoLiteratureG8U6CCSDContentsInput.xlsx';
 const requiredCategories = ['Required', 'Teacher', 'TCC'];
 
-// Function to read the spreadsheet and convert it to JSON
-async function convertSpreadsheetToJson(filePath) {
+// Helper Functions
+async function axiosGet(url, params) {
     try {
-        const rows = await readXlsxFile(filePath);
-        const headers = rows[0];
-        const jsonData = rows.slice(1).map(row => {
-            let rowData = {};
-            row.forEach((value, index) => {
-                rowData[headers[index]] = value;
-            });
-            return rowData;
-        });
-        return jsonData;
+        const response = await axios.get(url, { headers: { 'Authorization': `Bearer ${accessToken}` }, params });
+        return response.data;
     } catch (error) {
-        console.error('Error reading spreadsheet:', error);
+        console.error(`Error in GET request: ${error}`);
+        return null;
+    }
+}
+
+async function axiosDelete(url) {
+    try {
+        await axios.delete(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+        return true;
+    } catch (error) {
+        console.error(`Error in DELETE request: ${error}`);
+        return false;
+    }
+}
+
+// Main Functions
+async function getFilteredSpreadsheetData() {
+    try {
+        const rows = await readXlsxFile(spreadsheetPath);
+        const headers = rows[0];
+        return rows.slice(1).filter(row => {
+            const rowData = headers.reduce((obj, header, index) => ({ ...obj, [header]: row[index] }), {});
+            return rowData['Ed Audience/Role'] === 'Teacher' && requiredCategories.includes(rowData['Category']);
+        });
+    } catch (error) {
+        console.error(`Error reading spreadsheet: ${error}`);
         return [];
     }
 }
 
-// Function to find a module ID by name
-async function findModuleIdByName(courseId, moduleName) {
-    const response = await axios.get(`${canvasDomain}/api/v1/courses/${courseId}/modules`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` },
-        params: { per_page: 100 }
-    });
-
-    const foundModule = response.data.find(module => module.name === moduleName);
+async function findModuleIdByName(moduleName) {
+    const modules = await axiosGet(`${canvasDomain}/api/v1/courses/${courseId}/modules`, { per_page: 100 });
+    const foundModule = modules?.find(module => module.name === moduleName);
     return foundModule ? foundModule.id : null;
 }
 
-// Function to get items from a module
-async function getModuleItems(courseId, moduleId) {
-    try {
-        const response = await axios.get(`${canvasDomain}/api/v1/courses/${courseId}/modules/${moduleId}/items`, {
-            headers: { 'Authorization': `Bearer ${accessToken}` },
-            params: { per_page: 100 }
-        });
-        return response.data;
-    } catch (error) {
-        console.error(`Error fetching items from module ${moduleId}:`, error);
-        return [];
-    }
+async function getModuleItems(moduleId) {
+    return await axiosGet(`${canvasDomain}/api/v1/courses/${courseId}/modules/${moduleId}/items`, { per_page: 100 });
 }
 
-// Function to add an item to a module
-async function addModuleItem(courseId, moduleId, item) {
-    try {
-        await axios.post(`${canvasDomain}/api/v1/courses/${courseId}/modules/${moduleId}/items`, {
-            module_item: item
-        }, {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-    } catch (error) {
-        console.error(`Error adding item to module ${moduleId}:`, error);
+async function removeExtraItemsFromModules(moduleIds, validTitles) {
+    let removedItems = [];
+    for (const moduleId of moduleIds) {
+        const items = await getModuleItems(moduleId);
+        for (const item of items) {
+            if (!validTitles.some(title => item.title.includes(title))) {
+                const success = await axiosDelete(`${canvasDomain}/api/v1/courses/${courseId}/modules/${moduleId}/items/${item.id}`);
+                if (success) removedItems.push(item.title);
+            }
+        }
     }
+    return removedItems;
 }
 
+// Function to remove duplicate items in a module
+async function removeDuplicateItems(moduleId) {
+    const items = await getModuleItems(moduleId);
+    const titles = new Set();
+    let removedItems = [];
+
+    for (const item of items) {
+        if (titles.has(item.title)) {
+            const success = await axiosDelete(`${canvasDomain}/api/v1/courses/${courseId}/modules/${moduleId}/items/${item.id}`);
+            if (success) removedItems.push(item.title);
+        } else {
+            titles.add(item.title);
+        }
+    }
+    return removedItems;
+}
+
+// Execution
 (async () => {
     try {
-        const jsonData = await convertSpreadsheetToJson(spreadsheetPath);
-        const filteredData = jsonData.filter(row =>
-            requiredCategories.includes(row['Category']) &&
-            row['Ed Audience/Role'] === 'Teacher'
-        );
+        const gradeLevelResourceId = await findModuleIdByName("Grade-Level Resources");
+        const legacyAnneFrankModuleId = await findModuleIdByName("Unit 6 : The Legacy of Anne Frank");
 
-        const gradeLevelResourceId = await findModuleIdByName(courseId, "Grade-Level Resources");
-        const legacyAnneFrankModuleId = await findModuleIdByName(courseId, "Unit 6 : The Legacy of Anne Frank");
-        const teacherResourceModuleId = await findModuleIdByName(courseId, "G8_Unit 6: Teacher Resources (DO NOT PUBLISH)");
-
-        if (!gradeLevelResourceId || !legacyAnneFrankModuleId || !teacherResourceModuleId) {
+        if (!gradeLevelResourceId || !legacyAnneFrankModuleId) {
             throw new Error("Required modules not found");
         }
 
-        const gradeLevelItems = await getModuleItems(courseId, gradeLevelResourceId);
-        const legacyAnneFrankItems = await getModuleItems(courseId, legacyAnneFrankModuleId);
+        const removedFromGradeLevel = await removeDuplicateItems(gradeLevelResourceId);
+        const removedFromLegacyAnneFrank = await removeDuplicateItems(legacyAnneFrankModuleId);
 
-        for (const rowData of filteredData) {
-            const itemName = rowData['DISPLAY TITLE for course build'];
-            const sourceItem = gradeLevelItems.concat(legacyAnneFrankItems).find(item => item.title.includes(itemName));
+        console.log(`Removed duplicate items from 'Grade-Level Resources': ${removedFromGradeLevel.join(', ')}`);
+        console.log(`Removed duplicate items from 'Unit 6 : The Legacy of Anne Frank': ${removedFromLegacyAnneFrank.join(', ')}`);
+    } catch (error) {
+        console.error(`An error occurred: ${error}`);
+    }
+})();
 
-            if (sourceItem) {
-                await addModuleItem(courseId, teacherResourceModuleId, {
-                    title: sourceItem.title,
-                    type: sourceItem.type,
-                    content_id: sourceItem.content_id,
-                    position: 1 // Position can be adjusted as needed
-                });
-            }
+// Execution
+(async () => {
+    try {
+        const filteredData = await getFilteredSpreadsheetData();
+        const validTitles = filteredData.map(row => row['DISPLAY TITLE for course build']);
+
+        const gradeLevelResourceId = await findModuleIdByName("Grade-Level Resources");
+        const legacyAnneFrankModuleId = await findModuleIdByName("Unit 6 : The Legacy of Anne Frank");
+
+        if (!gradeLevelResourceId || !legacyAnneFrankModuleId) {
+            throw new Error("Required modules not found");
         }
 
-        console.log('Items added to Teacher Resource Module successfully');
+        const removedItems = await removeExtraItemsFromModules([gradeLevelResourceId, legacyAnneFrankModuleId], validTitles);
+        console.log(`Removed items: ${removedItems.join(', ')}`);
     } catch (error) {
-        console.error('An error occurred:', error);
+        console.error(`An error occurred: ${error}`);
     }
 })();

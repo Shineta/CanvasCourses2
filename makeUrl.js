@@ -1,0 +1,24 @@
+const baseUrl = 'https://hmh.instructure.com/api/lti/authorize';
+const queryParams = {
+    scope: 'openid',
+    response_type: 'id_token',
+    client_id: '32990000000000164',
+    redirect_uri: encodeURIComponent('https://api.eng.hmhco.com/lti-deep-linking/api/1.3.0/lti'),
+    login_hint: 'b9733a07ee877b2374f569897fd85bcdb7662ce0',
+    state: 'eyJraWQiOiJlZjdjZWY3Mi03ZWRmLTMxNjUtOWZhYi1mMmQ4OTEwNGNhYWIiLCJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiJodHRwczovL2NhbnZhcy5pbnN0cnVjdHVyZS5jb20iLCJzdWIiOiIzMjk5MDAwMDAwMDAwMDE2NCIsImxvZ2luX2hpbnQiOiJiOTczM2EwN2VlODc3YjIzNzRmNTY5ODk3ZmQ4NWJjZGI3NjYyY2UwIiwibHRpX21lc3NhZ2VfaGludCI6ImV5SjBlWEFpT2lKS1YxUWlMQ0poYkdjaU9pSklVekkxTmlKOS5leUoyWlhKcFptbGxjaUk2SWprMFpEazJOekV4WkdRek0yRTFNalptT0RVd05UbGtOVFl3T0dSa1pUUTNPVFJrTldVek1HTTNPRGs1WXpBM05ERmpZV0UzTVdZNU9XSXpZekkwTnpneE9XTXhaVGxtTWpobFlUTXlZell6WldZNE9EWmxNR0l5WVdReFpqazROekZqWWpnNFpHVTBOVEk1TURrMVpXVm1OV0UzWkdRek1XSm1PREkzTnpReklpd2lZMkZ1ZG1GelgyUnZiV0ZwYmlJNkltaHRhQzVwYm5OMGNuVmpkSFZ5WlM1amIyMGlMQ0pqYjI1MFpYaDBYM1I1Y0dVaU9pSkRiM1Z5YzJVaUxDSmpiMjUwWlhoMFgybGtJam96TWprNU1EQXdNREF3TURBeE5EY3dOaXdpWTJGdWRtRnpYMnh2WTJGc1pTSTZJbVZ1SWl3aWFXNWpiSFZrWlY5emRHOXlZV2RsWDNSaGNtZGxkQ0k2ZEhKMVpTd2laWGh3SWpveE56QTJOalF3TWpNNGZRLjU3YklXVmtyVTBBWlJKMHMzUWQ4Mm0yOXJUN2RvMUlIWWxKWXc3cmpTZTAiLCJ0YXJnZXRfbGlua191cmkiOiJodHRwczovL2FwaS5lbmcuaG1oY28uY29tL2x0aS1kZWVwLWxpbmtpbmcvYXBpLzEuMy4wL2x0aSIsImlzcyI6Imh0dHBzOi8vd3d3LmhtaGNvLmNvbSIsImV4cCI6MTcwNjYzOTk1OTI5NywiaWF0IjoxNzA2NjM5OTM5Mjk3LCJqdGkiOiJNVE14TldOa1lqZ3RNVGcxTmkwek5ESmlMV0ptTlRndFkyVmhZMlU1TkRCak1EWTAifQ.bl9wZ6hVoVgLra8xjBmaVjYb9THItrGJDt6nYZ6vgDIbE2yNNgn2EGoGh9gMPSWWqIv8vX7UodP_zUE-Nf-YgxizidePWj_X1zN3AL9nRzID_vSUcCIHNsbmUljiNvlGa8yoLnOeS0S8fLG1oTATOkflyg2zP92Y5h8oWoB4grBXmzj8_z9UK3hv6MpTosstIzFDiOxE1J9udK-ztw-0v9Im7oM8paDg8AL6bWp-dt89SCZj71RbmW4Q5Uv1wri1jHlsX0NocsJ2zeodE2H2Zg3zZgZdGI8cNe-hHfjTjmPzwdRQCwwhJaHaGxskSkaB0PJ4The4lvyJhuGhitGxQA',
+    nonce: '6be93c34-7956-3cc8-9d24-7889bcedaf17',
+    prompt: 'none',
+    lti_message_hint: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ2ZXJpZmllciI6Ijk0ZDk2NzExZGQzM2E1MjZmODUwNTlkNTYwOGRkZTQ3OTRkNWUzMGM3ODk5YzA3NDFjYWE3MWY5OWIzYzI0NzgxOWMxZTlmMjhlYTMyYzYzZWY4ODZlMGIyYWQxZjk4NzFjYjg4ZGU0NTI5MDk1ZWVmNWE3ZGQzMWJmODI3NzQzIiwiY2FudmFzX2RvbWFpbiI6ImhtaC5pbnN0cnVjdHVyZS5jb20iLCJjb250ZXh0X3R5cGUiOiJDb3Vyc2UiLCJjb250ZXh0X2lkIjozMjk5MDAwMDAwMDAxNDcwNiwiY2FudmFzX2xvY2FsZSI6ImVuIiwiaW5jbHVkZV9zdG9yYWdlX3RhcmdldCI6dHJ1ZSwiZXhwIjoxNzA2NjQwMjM4fQ.57bIWVkrU0AZRJ0s3Qd82m29rT7do1IHYlJYw7rjSe0',
+    deployment_id: '20810:7db438071375c02373713c12c73869ff2f470b68',
+    iss: encodeURIComponent('https://canvas.instructure.com')
+};
+
+// Constructing the full URL
+const authUrl = `${baseUrl}?${Object.keys(queryParams)
+    .map(key => `${key}=${queryParams[key]}`)
+    .join('&')}`;
+
+    console.log('Authorization URL:', authUrl);
+
+    // Additional logging to check the value of lti_message_hint
+    console.log('lti_message_hint:', queryParams.lti_message_hint);

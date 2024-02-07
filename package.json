@@ -1,9 +1,24 @@
 {
   "dependencies": {
     "axios": "^1.6.2",
+    "cheerio": "^1.0.0-rc.12",
     "express": "^4.18.2",
+    "fuzzball": "^2.1.2",
+    "ltijs": "^5.9.3",
+    "papaparse": "^5.4.1",
     "puppeteer": "^21.5.2",
     "read-excel-file": "^5.7.1",
+    "sequelize": "^6.36.0",
     "xlsx": "^0.18.5"
-  }
+  },
+  "name": "canvascourses2",
+  "description": "Automating the course creation process",
+  "version": "1.0.0",
+  "main": "JSON.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
